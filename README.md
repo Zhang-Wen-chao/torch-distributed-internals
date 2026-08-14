@@ -51,7 +51,9 @@ torchrun --standalone --nproc_per_node=2 \
 ## 状态
 
 - [x] 仓库骨架 + 章节地图
-- [ ] 00-primitives 源码走读
+- [x] 00-primitives：init/all_reduce Python 侧 + ProcessGroupNCCL C++ 侧走读笔记、
+      demo_allreduce + demo_async_stream（待 L20 验证）
+- [ ] 00-primitives 其余（rendezvous/store、NCCL 初始化、coalescing）
 - [ ] 01-device-mesh
 - [ ] 02-ddp
 - [ ] 03-zeroredundant

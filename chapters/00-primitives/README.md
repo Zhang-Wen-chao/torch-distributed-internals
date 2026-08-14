@@ -18,18 +18,20 @@ all-reduce、FSDP 的 all-gather/reduce-scatter、TP 的切分通信，全部建
 chapters/00-primitives/
 ├── README.md         # 本章入口（本文件）
 ├── source-map.md     # 源码地图：官方文件 + 版本 + 职责
-├── notes/            # 逐段走读笔记（待写）
+├── notes/
+│   ├── 01-init-and-allreduce-path.md   # init_process_group + all_reduce 完整路径
+│   └── 02-processgroupnccl-allreduce.md # C++/NCCL 侧实现
 └── demos/
-    ├── demo_allreduce.py   # collective 语义 + op 类型 + 分组
-    └── demo_async_stream.py  # 异步 + 多 stream 重叠（待写）
+    ├── demo_allreduce.py   # collective 语义 + op 类型 + 分组 + 异步 work
+    └── demo_async_stream.py  # 异步 + 多 stream 重叠（NCCL 专用）
 ```
 
 ## 演示目标
 
 | 演示 | 证明什么 |
 | --- | --- |
-| `demo_allreduce.py` | all-reduce 的 SUM/PRODUCT/MIN/MAX 语义、进程组内 rank 子集、结果与全局正确性 |
-| `demo_async_stream.py` | `async_op=True` 的非阻塞语义；单独 CUDA stream 上通信与计算重叠 |
+| `demo_allreduce.py` | all-reduce 的 SUM/PRODUCT/MIN/MAX 语义、进程组内 rank 子集、异步 work |
+| `demo_async_stream.py` | `async_op=True` 的非阻塞语义；NCCL 专属 stream 与计算重叠 |
 
 ## 使用手册（本层关键坑）
 
