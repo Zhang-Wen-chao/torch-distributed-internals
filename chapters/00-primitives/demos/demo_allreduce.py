@@ -88,7 +88,12 @@ def main() -> None:
     dist.init_process_group(backend=backend, init_method="env://")
     rank = dist.get_rank()
     world_size = dist.get_world_size()
-    device = torch.device(args.device)
+    if args.device == "cuda":
+        local_rank = int(os.environ.get("LOCAL_RANK", rank))
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f"cuda:{local_rank}")
+    else:
+        device = torch.device("cpu")
 
     if rank == 0:
         print(f"torch {torch.__version__} | backend={backend} | world_size={world_size}")

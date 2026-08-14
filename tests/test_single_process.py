@@ -9,7 +9,7 @@ import pytest
 DEMOS = pathlib.Path(__file__).resolve().parent.parent / "chapters" / "00-primitives" / "demos"
 
 
-@pytest.mark.parametrize("script", sorted(DEMOS.glob("*.py")))
+@pytest.mark.parametrize("script", sorted(p for p in DEMOS.glob("*.py") if not p.name.startswith("._")))
 def test_demo_importable(script: pathlib.Path) -> None:
     spec = importlib.util.spec_from_file_location(script.stem, script)
     assert spec is not None and spec.loader is not None
@@ -32,6 +32,7 @@ def test_demo_requires_torchrun(monkeypatch: pytest.MonkeyPatch) -> None:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    monkeypatch.setattr(sys, "argv", ["demo_allreduce"])
     monkeypatch.delenv("RANK", raising=False)
     with pytest.raises(SystemExit, match="torchrun"):
         module.main()
