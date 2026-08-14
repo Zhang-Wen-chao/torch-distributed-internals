@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch-distributed-internals"
+version = "0.1.0"
+description = "A source-walkthrough repo for PyTorch native distributed: c10d, DDP, FSDP, DTensor, HSDP, TP, PP, RPC"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = ["torch>=2.1,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
