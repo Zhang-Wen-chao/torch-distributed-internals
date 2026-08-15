@@ -63,9 +63,20 @@ torchrun --standalone --nproc_per_node=2 \
 | 06-tp | 官方 TP 输出与单设备一致（2×NCCL + Gloo） |
 | 07-pipelining | 官方 1F1B loss 与单设备一致（2×NCCL + Gloo） |
 | 08-rpc | 参数服务器模式（rpc_sync/rpc_async/RRef） |
+| 04b-fsdp2 | FSDP2(fully_shard)/DTensor：Shard/Replicate/redistribute + 数值等价 |
+| 04c-state-dict | FSDP FULL_STATE_DICT 保存/加载续训一致 |
+| 09-combined | TP=2 × DP=2 组合训练 loss 与单设备一致 |
+| 10-memory | 显存实测：DDP 4.88GB > FSDP1 3.67GB > 4卡 3.06GB；手写版未 reshard 最高 |
+| 11-nccl | all-reduce 算法实测：~1MB 以下 Tree 优、以上 Ring 优（socket 限 ~1.6GB/s） |
+| 12-checkpoint | FSDP+AC 省显存 70.7%（B=16 S=1024 实测） |
 
 每个 wrapper 的"手写 mini 版"（DDP/FSDP/HSDP）与官方实现数值等价，是
 本仓库的验证主线；版本差异与踩坑记录在对应章节 notes 末尾。
+
+**已知边界（标注不可行/未覆盖）**：完整 3D（TP×PP×DP）需 ≥8 卡（单机
+4 卡不可行）；多节点跨机 NCCL 无第二台机器；FSDP SHARDED_STATE_DICT
+（DTensor 表达）未单测（FULL 路径已覆盖）；SequenceParallel 只提了名字
+（在 06 的 style.py 地图中）。
 
 ## License
 
