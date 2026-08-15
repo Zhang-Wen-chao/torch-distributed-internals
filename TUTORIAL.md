@@ -225,7 +225,8 @@ schedule = Schedule1F1B(stage, n_microbatches=8, loss_fn=loss_fn)
 
 ```
 mesh = init_device_mesh("cuda", (2, 2), mesh_dim_names=("dp", "tp"))
-# 2 行（dp）× 2 列（tp）——每列一个 TP 组，每行一个 DP 组
+# 4 张卡排成 2×2：同一行 = 一个 TP 组（[0,1]、[2,3]），
+# 同一列 = 一个 DP 组（[0,2]、[1,3]）
 ```
 
 仓库 4×L20 实测的结论速览（完整数字在对应章节）：
