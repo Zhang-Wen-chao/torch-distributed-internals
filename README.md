@@ -69,13 +69,22 @@ python -m pytest -q
 **深入路线（想真正搞懂实现）**：核心是 02（DDP）和 04（FSDP）两章，先读
 笔记源码走读，再看手写 mini 版代码，最后看对照脚本怎么验证数值等价。
 
+## 版本说明（重要，先读）
+
+| 概念 | 版本 | 说明 |
+| --- | --- | --- |
+| **运行门槛** | `torch>=2.1,<3` | 跑任何 demo/测试的最低要求（pyproject.toml） |
+| **走读/验证版本** | `2.10.0a0+a36e1d39eb.nv26.01.42222806`（NGC PyTorch 26.01 nightly） | 所有笔记的源码行号、所有实测数据、所有踩坑结论都绑定这个版本 |
+
+**笔记里的行号只对这个版本有效**。PyTorch 分布式部分快速演进（例如
+pipelining 的 API 在 2.10 有破坏性改动），跨版本阅读时请先核对。
+
 ## 验证环境与可信度
 
-所有演示在 4×L20（PCIe，无 NVLink）上实测通过，torch `2.10.0a0`
-（NGC PyTorch 26.01 nightly）。每个章节 README 末尾有验证记录表
-（配置 × 结果）。**注意**：结果绑定特定硬件/版本；不同环境结论可能不同
-（尤其是性能数字，见 [10-memory](chapters/10-memory/) 和
-[11-nccl-internals](chapters/11-nccl-internals/) 的边界说明）。
+所有演示在 4×L20（PCIe，无 NVLink）上实测通过（版本见上）。每个章节
+README 末尾有验证记录表（配置 × 结果）。**注意**：结果绑定特定硬件/版本；
+不同环境结论可能不同（尤其是性能数字，见 [10-memory](chapters/10-memory/)
+和 [11-nccl-internals](chapters/11-nccl-internals/) 的边界说明）。
 
 ## 已知边界
 
