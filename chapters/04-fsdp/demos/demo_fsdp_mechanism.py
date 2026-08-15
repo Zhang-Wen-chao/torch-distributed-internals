@@ -63,8 +63,11 @@ class ManualFSDP(nn.Module):
             offset += n
         assert offset == self._numel
 
-        # 3. rank 0 广播初始权重（FSDP/DDP 共同不变量）
-        dist.broadcast(self._flat.data, src=0, group=process_group)
+        # 3. rank 0 广播初始权重（FSDP/DDP 共同不变量）。
+        #    注意：broadcast 的 src 在本版本是「全局 rank」语义
+        #    （_canonicalize_group_rank 走 global_rank 分支）。
+        src_global = dist.distributed_c10d.get_global_rank(process_group, 0)
+        dist.broadcast(self._flat.data, src=src_global, group=process_group)
 
         # 4. 分片叶子存储（优化器的参数；不能是 flat 的视图——视图非叶子，
         #    优化器拒绝）+ 全量 gather buffer
