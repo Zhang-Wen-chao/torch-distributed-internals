@@ -1,8 +1,14 @@
-# 11-nccl-internals — NCCL 通信算法（ring/tree/pipe）实测
+# 11-nccl-internals — NCCL 算法：ring vs tree 实测
 
 目标：实测 NCCL 的算法选择对 all-reduce 性能的影响——不同消息大小、
 不同 `NCCL_ALGO`（Ring/Tree/PatRing）下的耗时，理解"小消息 latency 主导、
 大消息 bandwidth 主导"以及算法的适用区间。
+
+## TL;DR
+
+实测（4×L20 PCIe）：all-reduce 在 ~1MB 以下 **Tree 算法**延迟低，以上
+**Ring 算法**带宽优。本环境带宽上限 ~1.6GB/s（shm 禁用走 socket），
+远低于 PCIe 理论值。
 
 ## 本章要回答的问题
 
@@ -11,16 +17,7 @@
 2. `NCCL_ALGO` / `NCCL_PROTO` / `NCCL_DEBUG=INFO` 怎么用？
 3. 4 卡 PCIe（无 NVLink）上不同算法的实测差异？
 
-## 目录
-
-```text
-chapters/11-nccl-internals/
-├── README.md      # 本章入口（本文件）
-└── demos/
-    └── bench_allreduce.py  # all-reduce benchmark（size × algo）
-```
-
-## L20 验证记录
+## 验证记录
 
 | 消息大小 | Ring | Tree | 结论 |
 | --- | --- | --- | --- |

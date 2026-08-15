@@ -72,7 +72,7 @@ NCCLComm::split(parentComm, split_color, rank, config)  → ncclCommSplit()
 `Duplicate GPU detected : rank 0 and rank 1 both on CUDA device 0`
 （NCCLUtils.cpp:94）。NCCL 要求每个进程独占一个 GPU；torchrun 下必须按
 `LOCAL_RANK` 绑定设备（`torch.cuda.set_device(local_rank)`），这正是
-mini-megatron `assign_device`（17.15）在做的事。
+各并行框架的 `assign_device` 在做的事。
 
 ## 下一步
 

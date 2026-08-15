@@ -1,25 +1,21 @@
-# 07-pipelining — 官方流水线并行（torch.distributed.pipelining）
+# 07-pipelining — PP：把层切开，流水线跑
 
 目标：读透官方 pipelining——`PipelineStage`（阶段）+ `Schedule1F1B`（调度）。
-与 mini-megatron 手写的串行/1F1B 流水线对照。官方基于**自动图切分**
-（`_IR.py` 的 `split_module` 自动找切分点），mini-megatron 手工按层数切。
+并对照手工实现的串行/1F1B 流水线。官方基于**自动图切分**（`split_spec`
+标注切分点），手工版按层数直接切。
+
+## TL;DR
+
+PP = 按层切开模型分给多卡，数据像流水线流过；**1F1B 调度**（一次前向一次
+反向交替）用来填气泡。官方训练 loss 与单设备一致。
 
 ## 本章要回答的问题
 
 1. `PipelineStage` / `Schedule1F1B` / `split_module` 各做什么？
-2. 官方 1F1B 的 warmup 公式与 mini-megatron 的对应关系？
+2. 官方 1F1B 的 warmup 公式与手工实现的对应关系？
 3. 官方 PP 训练与单设备训练是否数值等价（loss 一致）？
 
-## 目录
-
-```text
-chapters/07-pipelining/
-├── README.md      # 本章入口（本文件）
-└── demos/
-    └── demo_pp.py # 官方 1F1B 训练 vs 单设备 loss 对照
-```
-
-## L20 验证记录
+## 验证记录
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |
@@ -68,15 +64,15 @@ chapters/07-pipelining/
 | `:963-964` | cooldown：收尾 bwd sends |
 | `:2493` | `ScheduleInterleaved1F1B`：多 stage 交错（v-shape） |
 
-## 与 mini-megatron 1F1B 对照
+## 两种实现层次
 
-| 维度 | 官方 pipelining | mini-megatron |
+| 维度 | 官方 pipelining | 手工 1F1B（最小复刻） |
 | --- | --- | --- |
-| warmup | `min(n_mb, num_stages - stage_index)` | `pp_size - pp_rank - 1` |
-| 切分 | `split_module` 自动（fx 图，按 `examples` 样例） | 手工按层数分配 |
-| 通信 | `_batch_p2p`（send/recv 批量融合，`:888-924`） | 逐 micro-batch send/recv |
-| loss | 仅最后 stage，`loss_fn` 传入 | 最后 stage 计算后广播 |
-| 调度实现 | 集中式（stage 外显式驱动） | 每 stage 内循环 |
+| 切分 | `split_spec` 自动（fx 图） | 手工按层数分配 |
+| 通信 | `_batch_p2p`（send/recv 批量融合） | 逐 micro-batch send/recv |
+| loss | 仅最后 stage，`losses` 列表回传 | 最后 stage 计算后广播 |
+| 调度 | 集中式（stage 外驱动） | 每 stage 内循环 |
 
-**本质**：官方是"图切分 + 集中式调度器"的工程化 1F1B；mini-megatron 是
-"手工切层 + 阶段内循环"的最小复刻。数学调度一致，工程结构不同。
+warmup 公式两者一致：`num_stages - stage_index`（官方）与
+`pp_size - pp_rank - 1`（手工）本质相同。想理解 1F1B 调度，手写一版
+（chapter 00 的 p2p 原语即可）；生产中用官方版。

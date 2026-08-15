@@ -1,8 +1,13 @@
-# 01-device-mesh — DeviceMesh 与通信域
+# 01-device-mesh — DeviceMesh：谁和谁通信的组织图
 
 目标：读透 `torch.distributed.device_mesh`——它是 FSDP2 / DTensor / TP 的地基。
 DeviceMesh 把"一维的 rank 列表"组织成 n 维网格，为每一维自动创建进程组，
 通信在不同维度上互不干扰。
+
+## TL;DR
+
+DeviceMesh = 把 GPU 排成一张网格（行是 DP、列是 TP），**每一维自动建一个
+通信组**；`mesh["tp"]` 切片零成本。它是 DTensor / FSDP2 / TP 共同的地基。
 
 ## 本章要回答的问题
 
@@ -12,21 +17,9 @@ DeviceMesh 把"一维的 rank 列表"组织成 n 维网格，为每一维自动�
 3. `mesh["tp"]` 切片、`get_group("tp")`、`get_group_rank` 的实现？
 4. DeviceMesh 与 DTensor 的关系（`sharding` 如何落在 mesh 上）？
 
-## 目录
+## 验证记录
 
-```text
-chapters/01-device-mesh/
-├── README.md          # 本章入口（本文件）
-├── notes/
-│   └── 01-device-mesh-internals.md  # DeviceMesh 内部：mesh→进程组 的完整路径
-└── demos/
-    └── demo_device_mesh.py   # 2D mesh 组结构 + 切片 + 分组通信验证
-```
-
-## L20 验证记录（2026-08-14）
-
-环境：4×L20（PCIe，无 NVLink），torch `2.10.0a0+a36e1d39eb.nv26.01.42222806`，
-4×L20。环境变量同 chapter 00。
+环境：4×L20（PCIe，无 NVLink），torch `2.10.0a0+a36e1d39eb.nv26.01.42222806`。
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |
@@ -53,7 +46,7 @@ chapters/01-device-mesh/
 
 ## 源码地图
 
-走读基线：容器内 NGC PyTorch 26.01 = `torch 2.10.0a0`
+走读基线：NGC PyTorch 26.01 镜像 = `torch 2.10.0a0`
 （`2.10.0a0+a36e1d39eb.nv26.01.42222806`）。行号以该版本为准。
 
 ## Python 侧

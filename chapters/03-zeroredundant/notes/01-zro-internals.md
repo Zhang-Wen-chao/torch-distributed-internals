@@ -37,7 +37,7 @@ _partition_parameters():
 
 - 贪心"最大优先 + 最小负载"装箱，目标是各 rank 分到的**字节数**尽量均匀。
 - 注意：参数**不跨 rank 拆分**（粒度是参数级，不是扁平分片）——这是它和
-  mini-deepspeed（扁平等长切片）的最大结构差异。
+  常见手工实现（扁平等长切片）的最大结构差异。
 - 分片结果缓存在 `_partition_parameters_cache`，所有 rank 用相同算法得到
   相同结果，无需通信。
 
@@ -75,10 +75,10 @@ step():
   对齐（`:432-443`，`:895` 的 `_assign_bucket_subset_to_rank`），让参数更新
   发生在 DDP 桶重建之后——省掉一次"广播初始化"的同步。
 
-## 与 mini-deepspeed 的语义对照结论
+## 语义对照结论
 
-官方 ZRO 与 mini-deepspeed ZeRO-1 是**同一 ZeRO-1 语义**的两个实现：
-- 状态归属：参数级分片（官方） vs 扁平向量切片（mini）；
-- 参数同步：广播（官方） vs all-gather（mini）；
-- 梯度：不处理（官方，假设 DDP 已平均） vs 内部 all-reduce（mini）；
-- 附加：官方有 DDP bucket 对齐和 consolidate state_dict，mini 显式不做。
+官方 ZRO 与常见手工实现是**同一 ZeRO-1 语义**的两种写法：
+- 状态归属：参数级分片（官方） vs 扁平向量切片（手工）；
+- 参数同步：广播（官方） vs all-gather（手工）；
+- 梯度：不处理（官方，假设 DDP 已平均） vs 内部 all-reduce（手工）；
+- 附加：官方有 DDP bucket 对齐和 consolidate state_dict，手工版不做。

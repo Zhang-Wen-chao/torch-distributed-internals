@@ -1,8 +1,14 @@
-# 08-rpc — 分布式 RPC（参数服务器 / 模型级分布式）
+# 08-rpc — RPC：点对点远程调用
 
 目标：读透 `torch.distributed.rpc`——与 collective（c10d）不同，RPC 是
 **点对点**的远程调用（`rpc_sync` / `rpc_async` / `remote` + RRef），适合
 参数服务器、流水线/模型级分布式，以及不是"全体同步"的场景。
+
+## TL;DR
+
+RPC = **点对点**的远程函数调用（不是集体通信），适合参数服务器等非对称
+拓扑。三种调用：`rpc_sync`（等结果）/ `rpc_async`（Future）/ `remote`
+（远端对象 RRef）。
 
 ## 本章要回答的问题
 
@@ -11,16 +17,7 @@
 2. `rpc_sync` / `rpc_async` / `remote` 三种调用的区别？
 3. 参数服务器模式怎么搭？（worker 远程调用 server 的函数）
 
-## 目录
-
-```text
-chapters/08-rpc/
-├── README.md      # 本章入口（本文件）
-└── demos/
-    └── demo_parameter_server.py  # 参数服务器模式
-```
-
-## L20 验证记录
+## 验证记录
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |

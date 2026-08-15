@@ -1,22 +1,19 @@
-# 12-activation-checkpoint — 激活检查点
+# 12-activation-checkpoint — 激活检查点：用计算换显存
 
 目标：走读 `torch.utils.checkpoint` 并用 FSDP 组合实测显存收益——
 用计算换显存（反向时重算中间激活，不保存）。
+
+## TL;DR
+
+checkpoint = 前向不保存激活、反向重算——**用计算换显存**。实测：FSDP +
+checkpoint 峰值 17.0→4.98GB（省 70.7%），loss 等价。收益取决于激活占
+峰值的比例。
 
 ## 本章要回答的问题
 
 1. checkpoint 的原理？（前向不保存激活，反向时重算）
 2. `use_reentrant=True/False` 两种实现的差异？
 3. FSDP + checkpoint 组合能再省多少显存？
-
-## 目录
-
-```text
-chapters/12-activation-checkpoint/
-├── README.md      # 本章入口（本文件）
-└── demos/
-    └── demo_checkpoint.py  # FSDP ± checkpoint 峰值显存对比
-```
 
 ## 走读摘要（checkpoint.py:349）
 
@@ -29,7 +26,7 @@ chapters/12-activation-checkpoint/
 - 代价：前向计算量 ×2（前向+反向各一次）；收益：激活显存按 checkpoint
   粒度降低。
 
-## L20 验证记录
+## 验证记录
 
 | 配置 | 峰值显存 | 说明 |
 | --- | --- | --- |

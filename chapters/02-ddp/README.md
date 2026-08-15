@@ -1,8 +1,13 @@
-# 02-ddp — DistributedDataParallel
+# 02-ddp — DDP：数据并行的官方实现
 
 目标：读透 DDP——它是用得最多的并行 wrapper，也是理解 FSDP/HSDP 的跳板。
 DDP 的核心不在 Python 而在于 C++ 的 `Reducer`：参数分桶、autograd 梯度 hook、
 桶就绪即 all-reduce、与 optimizer.step() 的契约。
+
+## TL;DR
+
+DDP 的全部秘密 = **梯度分桶 + 桶满即 all-reduce**（通信与反向计算重叠）。
+仓库里的 `ManualDDP` 用 150 行手写了这个机制，与官方 DDP 训练参数逐元素一致。
 
 ## 本章要回答的问题
 
@@ -14,23 +19,9 @@ DDP 的核心不在 Python 而在于 C++ 的 `Reducer`：参数分桶、autograd
    解决了什么问题？
 5. 手写一个最小 DDP（autograd hook + 分桶 + all-reduce）能否与官方数值一致？
 
-## 目录
+## 验证记录
 
-```text
-chapters/02-ddp/
-├── README.md             # 本章入口（本文件）
-├── notes/
-│   ├── 01-python-side.md # Python 侧：初始化与 forward 编排
-│   └── 02-reducer-cpp.md # C++ Reducer：分桶 / hook / all-reduce
-└── demos/
-    ├── demo_ddp_mechanism.py     # 手写 DDP（不用官方 wrapper）
-    └── compare_ddp_manual_vs_official.py  # 与官方 DDP 数值对照（待写）
-```
-
-## L20 验证记录（2026-08-15）
-
-环境：4×L20（PCIe，无 NVLink），torch `2.10.0a0+a36e1d39eb.nv26.01.42222806`，
-4×L20。环境变量同 chapter 00。
+环境：4×L20（PCIe，无 NVLink），torch `2.10.0a0+a36e1d39eb.nv26.01.42222806`。
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |

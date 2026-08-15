@@ -3,6 +3,12 @@
 这是整个仓库的第一章，也是所有后续章节的地基。如果你读完觉得"不接地气"，
 先看下面的白话解释，再决定从哪里入手。
 
+## TL;DR
+
+`all_reduce` 是整个分布式训练的原子动作——DDP 同步梯度、FSDP 还原参数，
+全是用它（和 all_gather / reduce_scatter 几个表亲）拼出来的。一次通信从
+Python 到 NCCL 分三层：Python 入口 → C++ ProcessGroup 封装 → NCCL 库。
+
 ## 这一章到底在讲什么
 
 分布式训练 = 多个 GPU 一起训练同一个模型。多个 GPU 之间需要**通信**，
@@ -86,7 +92,7 @@
 
 ## 源码地图
 
-走读基线：容器内 NGC PyTorch 26.01 = `torch 2.10.0a0`
+走读基线：NGC PyTorch 26.01 镜像 = `torch 2.10.0a0`
 （`2.10.0a0+a36e1d39eb.nv26.01.42222806`）。行号以该版本为准，走读前先核对。
 
 ## Python 侧
@@ -122,7 +128,7 @@
 
 ## 取源方式
 
-容器内 Python 包只带编译后的 `_C` 扩展，不带 c10d C++ 源码。需要 C++ 源码时从
+NGC 镜像的 Python 包只带编译后的 `_C` 扩展，不带 c10d C++ 源码。需要 C++ 源码时从
 GitHub `pytorch/pytorch` 拉取对应 tag（本仓库基线为 NGC 26.01 对应的 nightly
 commit，见上），放到容器临时目录并在笔记中标注。
 

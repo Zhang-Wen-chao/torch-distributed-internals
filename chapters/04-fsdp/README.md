@@ -1,9 +1,15 @@
-# 04-fsdp — FullyShardedDataParallel
+# 04-fsdp — FSDP：分片 + 用完就放
 
 目标：读透 FSDP1 的核心生命周期——这是显存优化的关键 wrapper，也是理解
 FSDP2/DTensor 和 HSDP 的基础。核心机制：**参数展平成 FlatParameter 分片；
 forward 前 all-gather 还原全量；backward 时 reduce-scatter 梯度；反向结束
 释放全量参数**。
+
+## TL;DR
+
+FSDP = 参数/梯度/优化器状态**全分片**：前向 gather 拼出全量、用完立刻释放
+（reshard）。**省显存靠"放"不靠"切"**（第 10 章有实测证明）。FSDP2 用
+DTensor 表达同一件事。
 
 ## 本章要回答的问题
 
@@ -14,19 +20,7 @@ forward 前 all-gather 还原全量；backward 时 reduce-scatter 梯度；反�
 4. 手写一个最小 FSDP 能否与官方数值一致？
 5. FSDP1 vs FSDP2（DTensor）的差异？
 
-## 目录
-
-```text
-chapters/04-fsdp/
-├── README.md          # 本章入口（本文件）
-├── notes/
-│   └── 01-fsdp1-lifecycle.md  # FlatParameter + forward/backward 生命周期
-└── demos/
-    ├── demo_fsdp_mechanism.py         # 手写 FSDP（不用官方 wrapper）
-    └── compare_fsdp_manual_vs_official.py  # 与官方 FSDP 数值对照
-```
-
-## L20 验证记录
+## 验证记录
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |

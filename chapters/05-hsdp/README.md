@@ -1,9 +1,14 @@
-# 05-hsdp — Hybrid Sharded Data Parallel
+# 05-hsdp — HSDP：分片与复制的折中
 
 目标：HSDP 是 FSDP1 的 HYBRID_SHARD 策略（也是 FSDP2 的 `fully_shard` +
 复制组的组合）：**组内分片（reduce-scatter）+ 组间复制（all-reduce）**。
 它解决了纯 FSDP 跨节点通信量大的问题：通信被限制在分片组内，复制组之间
 只同步分片梯度。
+
+## TL;DR
+
+HSDP = FSDP 的中间档：**组内分片（省显存）+ 组间复制（省通信）**。
+梯度路径 = 组内 reduce-scatter + 组间 all-reduce。
 
 ## 本章要回答的问题
 
@@ -12,16 +17,7 @@
 3. 与 FSDP 的差异：参数只 gather 一次还是两次？
 4. 手写 HSDP 与官方 HYBRID_SHARD 数值对照。
 
-## 目录
-
-```text
-chapters/05-hsdp/
-├── README.md      # 本章入口（本文件）
-└── demos/
-    └── demo_hsdp.py  # 手写 HSDP + 与官方 HYBRID_SHARD 对照
-```
-
-## L20 验证记录
+## 验证记录
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |

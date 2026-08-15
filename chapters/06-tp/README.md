@@ -1,27 +1,23 @@
-# 06-tp — 官方张量并行（torch.distributed.tensor.parallel）
+# 06-tp — TP：把权重切开
 
 目标：读透官方 `parallelize_module` + ColwiseParallel / RowwiseParallel——
 它是建立在 **DTensor** 之上的 TP 实现（权重用 `distribute_tensor` 打上
-Shard 布局，计算仍走原生算子，DTensor 负责通信）。与 mini-megatron 手写的
-Column/Row ParallelLinear 对照。
+Shard 布局，计算仍走原生算子，DTensor 负责通信）。并对照手工实现的
+Column/Row ParallelLinear。
+
+## TL;DR
+
+TP = 把一层的大权重沿行/列切开分给多卡（Colwise / Rowwise）。官方实现就是
+"给权重贴上 DTensor 标签"，通信自动发生；前向输出与单设备完全一致。
 
 ## 本章要回答的问题
 
 1. `parallelize_module(module, tp_mesh, {"w1": ColwiseParallel()})` 做了什么？
 2. Colwise / Rowwise 的权重布局与输入输出布局（Replicate/Shard）？
-3. 官方 TP 与 mini-megatron 手写实现（Column/Row + all-reduce）的对应关系？
+3. 官方 TP 与手工实现（Column/Row + all-reduce）的对应关系？
 4. 官方 TP 的前向结果 == 单设备模型前向结果（单设备语义保持）？
 
-## 目录
-
-```text
-chapters/06-tp/
-├── README.md       # 本章入口（本文件）
-└── demos/
-    └── demo_tp.py  # 官方 TP 语义验证（与单设备模型输出一致）
-```
-
-## L20 验证记录
+## 验证记录
 
 | 演示 | 配置 | 结果 |
 | --- | --- | --- |
@@ -77,15 +73,17 @@ chapters/06-tp/
 | `:427` | `PrepareModuleInput`：输入 reshape/redistribute |
 | `:595` | `PrepareModuleOutput`：输出布局转换 |
 
-## 与 mini-megatron 对照
+## 两种实现层次
 
-| 维度 | 官方 TP | mini-megatron |
+同一套 TP 数学（沿列/行切权重 + 归约合并）有两种写法：
+
+| 维度 | 官方 TP（DTensor 层） | 手工 TP（原语层） |
 | --- | --- | --- |
 | 权重切分 | DTensor Shard(0)/Shard(1)（`distribute_tensor`） | 手工沿列/行切片 |
-| 输入布局 | DTensor Replicate / 手动 redistribute | 每 rank 持全量输入 |
-| 输出合并 | Shard(-1) 的 DTensor 算子自动 all-gather | 手写 all-reduce |
-| 通信触发 | DTensor 算子内部（redistribute） | 显式 dist.all_reduce |
-| 前向语义 | 与单设备一致（官方保证） | 与 Megatron 一致 |
+| 输入布局 | DTensor Replicate / redistribute | 每 rank 持全量输入 |
+| 输出合并 | DTensor 算子自动通信 | 显式 dist.all_reduce |
+| 前向语义 | 与单设备一致（官方保证） | 与官方一致（本仓库验证） |
 
-**本质**：官方 TP = "权重打上 Shard 布局的普通模块" + DTensor 自动补齐通信；
-mini-megatron = 显式手写同一套数学。两者是同一 TP 语义的两个层次。
+**本质**：官方 TP = "权重打上 Shard 布局的普通模块"，通信由 DTensor 自动
+补齐；手工版 = 用 chapter 00 的原语显式写同一套数学。想从底层理解 TP，
+先写手工版；想在生产中用，用官方版。
