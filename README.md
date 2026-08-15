@@ -1,82 +1,89 @@
 # torch-distributed-internals
 
-教学型、源码剖析仓库：把 PyTorch 原生分布式（`torch.distributed`）从底层原语到
-上层 wrapper 逐层读透——底层怎么实现、怎么使用。它不是生产替代品，不承诺与任何
-版本的官方行为完全一致；所有走读笔记标注对应 torch 版本与源码行号。
+把 PyTorch 原生分布式（`torch.distributed`）从底层通信原语到上层 wrapper
+逐层讲透的教学仓库：**每一个机制都配有源码走读、手写复现、和与官方实现的
+数值等价验证**。
 
-## 章节
+如果你想知道"`DistributedDataParallel` 底层到底怎么工作的"、"FSDP 为什么
+能省显存"、"一次 `all_reduce` 从 Python 到 NCCL 经历了什么"——这个仓库
+就是为这些问题写的。
 
-```text
-00-primitives   c10d: ProcessGroup、NCCL/Gloo、collective 语义、异步与 stream 重叠
-01-device-mesh  DeviceMesh + sharding spec（DTensor 的地基）
-02-ddp          bucketing / 梯度 hook / static graph / 与 optimizer 的契约
-03-zeroredundant 官方 ZeroRedundancyOptimizer
-04-fsdp         FSDP1 分片与生命周期 → FSDP2 / DTensor 统一
-05-hsdp         分片组 × 复制组
-06-tp           官方 torch.distributed.tensor.parallel
-07-pipelining   官方 torch.distributed.pipelining
-08-rpc          参数服务器 / 分布式推理
+## 你能从这份仓库里学到什么
+
+| 问题 | 对应章节 |
+| --- | --- |
+| 一次 `dist.all_reduce(t)` 从 Python 到 NCCL 的完整路径？ | [00-primitives](chapters/00-primitives/) |
+| 进程组怎么组织？`mesh["dp"]` / `mesh["tp"]` 是什么？ | [01-device-mesh](chapters/01-device-mesh/) |
+| DDP 的梯度分桶、hook、all-reduce 机制？ | [02-ddp](chapters/02-ddp/) |
+| 官方 ZeRO-1 怎么分片优化器状态？ | [03-zeroredundant](chapters/03-zeroredundant/) |
+| FSDP 的 unshard/reshard 生命周期？FSDP2/DTensor 是什么？ | [04-fsdp](chapters/04-fsdp/) |
+| HSDP 的分片组 × 复制组？ | [05-hsdp](chapters/05-hsdp/) |
+| 官方张量并行（Colwise/Rowwise）？ | [06-tp](chapters/06-tp/) |
+| 官方流水线并行（1F1B 调度）？ | [07-pipelining](chapters/07-pipelining/) |
+| RPC 参数服务器模式？ | [08-rpc](chapters/08-rpc/) |
+| TP+DP 组合并行？ | [09-combined](chapters/09-combined/) |
+| DDP vs FSDP 到底省多少显存？（实测） | [10-memory](chapters/10-memory/) |
+| NCCL 的 ring/tree 算法怎么选？（实测） | [11-nccl-internals](chapters/11-nccl-internals/) |
+| Activation Checkpoint 怎么省显存？（实测） | [12-activation-checkpoint](chapters/12-activation-checkpoint/) |
+
+## 每章的结构
+
+```
+chapters/<编号>-<主题>/
+├── README.md       # 章入口：白话讲清本章要解决什么问题
+├── source-map.md   # 源码地图：要读哪些官方文件（版本 + 行号 + 职责）
+├── notes/          # 逐段源码走读（注释版关键路径 + 行号）
+└── demos/          # 最小可运行脚本（可独立验证内部机制）
 ```
 
-每章三件套：
-
-1. **源码走读**：注释版关键路径笔记（官方文件 + 行号 + torch 版本）
-2. **机制演示**：最小可运行脚本，单独复现该内部机制（不依赖官方 wrapper）
-3. **使用手册**：正确用法 + 坑
+三个核心章节（02-ddp、04-fsdp、05-hsdp）除了读官方源码，还各自附了一个
+**手写 mini 版实现**（不依赖官方 wrapper），并在 L20 上验证了
+**手写版与官方实现训练参数逐元素一致**——这是本仓库验证主线：读懂之后，
+你亲手实现一遍，再和官方对答案。
 
 ## 快速开始
 
 ```bash
-git clone <project-root>
-python -m pip install -e '.[dev]'
+git clone <project-url>
+cd torch-distributed-internals
 
-# 单进程辅助函数测试
-python -m pytest -q
-
-# 两 rank CPU 演示（示例）
+# 1. 先跑一个最简演示（单机 CPU，两个进程）
 torchrun --standalone --nproc_per_node=2 \
   chapters/00-primitives/demos/demo_allreduce.py --device cpu
+# 预期输出：PASS: all collective checks
+
+# 2. 再跑手写 DDP 对照（有 GPU 时）
+torchrun --standalone --nproc_per_node=2 \
+  chapters/02-ddp/demos/demo_ddp_mechanism.py --device cpu
+
+# 3. 运行测试
+python -m pytest -q
 ```
 
-## 与相邻教学项目的关系
+> 需要 `torch>=2.1`（带 `torch.distributed`）。GPU 演示需要多卡（2~4 张）。
 
-| 项目 | 分工 |
-| --- | --- |
-| [mini-megatron](https://github.com/Zhang-Wen-chao/mini-megatron) | 从零复刻 TP/PP/DP 语义 |
-| [mini-deepspeed](https://github.com/Zhang-Wen-chao/mini-deepspeed) | 从零复刻 ZeRO 0/1/2/3 |
-| 本项目 | 剖析 PyTorch 官方实现（c10d / DDP / FSDP / DTensor / HSDP / TP / PP / RPC） |
+## 怎么读（两条路线）
 
-三者独立演进，互不 import。
+**入门路线（想理解"大概怎么回事"）**：按章节顺序读每章的 `README.md`，
+跑一遍对应 `demos/` 脚本，然后读 `notes/`。约 1~2 天。
 
-## 状态
+**深入路线（想真正搞懂实现）**：核心是 02（DDP）和 04（FSDP）两章，先读
+笔记源码走读，再看手写 mini 版代码，最后看对照脚本怎么验证数值等价。
 
-全部章节源码走读 + 演示完成，均已在 4×L20（torch 2.10.0a0 nightly）验证：
+## 验证环境与可信度
 
-| 章节 | 核心验证（L20） |
-| --- | --- |
-| 00-primitives | all_reduce 语义/子组/异步+stream 重叠、coalescing（2/4×NCCL + Gloo） |
-| 01-device-mesh | 2D mesh 组结构/切片/通信域隔离（4×NCCL + Gloo） |
-| 02-ddp | 手写 DDP 与官方 DDP 3 步参数逐元素一致（2/4×NCCL + Gloo） |
-| 03-zeroredundant | 官方 ZeRO-1 与全量 AdamW 逐元素一致（2/4×NCCL + Gloo） |
-| 04-fsdp | 手写 FSDP 与官方 FSDP FULL_SHARD 逐元素一致（2/4×NCCL） |
-| 05-hsdp | 手写 HSDP 与官方 HYBRID_SHARD 逐元素一致（4×NCCL） |
-| 06-tp | 官方 TP 输出与单设备一致（2×NCCL + Gloo） |
-| 07-pipelining | 官方 1F1B loss 与单设备一致（2×NCCL + Gloo） |
-| 08-rpc | 参数服务器模式（rpc_sync/rpc_async/RRef） |
-| 04b-fsdp2 | FSDP2(fully_shard)/DTensor：Shard/Replicate/redistribute + 数值等价 |
-| 04c-state-dict | FSDP FULL_STATE_DICT 保存/加载续训一致 |
-| 09-combined | TP=2 × DP=2 组合训练 loss 与单设备一致 |
-| 10-memory | 显存实测：DDP 4.88GB > FSDP1 3.67GB > 4卡 3.06GB；手写版未 reshard 最高 |
-| 11-nccl | all-reduce 算法实测：~1MB 以下 Tree 优、以上 Ring 优（socket 限 ~1.6GB/s） |
-| 12-checkpoint | FSDP+AC 省显存 70.7%（B=16 S=1024 实测） |
+所有演示在 4×L20（PCIe，无 NVLink）上实测通过，torch `2.10.0a0`
+（NGC PyTorch 26.01 nightly）。每个章节 README 末尾有验证记录表
+（配置 × 结果）。**注意**：结果绑定特定硬件/版本；不同环境结论可能不同
+（尤其是性能数字，见 [10-memory](chapters/10-memory/) 和
+[11-nccl-internals](chapters/11-nccl-internals/) 的边界说明）。
 
-每个 wrapper 的"手写 mini 版"（DDP/FSDP/HSDP）与官方实现数值等价，是
-本仓库的验证主线；版本差异与踩坑记录在对应章节 notes 末尾。
+## 已知边界
 
-**已知边界（标注不可行/未覆盖）**：完整 3D（TP×PP×DP）需 ≥8 卡（单机
-4 卡不可行）；多节点跨机 NCCL 无第二台机器；FSDP SHARDED_STATE_DICT
-（DTensor 表达）未单测（FULL 路径已覆盖）；SequenceParallel 只提了名字
-（在 06 的 style.py 地图中）。
+- 完整 3D 并行（TP×PP×DP）需要 ≥8 卡，本仓库在 4 卡上验证了 TP×DP 组合
+- 多节点跨机 NCCL 未验证（单机环境）
+- FSDP `SHARDED_STATE_DICT`（DTensor 表达）未单独测试（FULL 路径已覆盖）
+- `SequenceParallel` 只写了源码地图，未展开
 
 ## License
 
