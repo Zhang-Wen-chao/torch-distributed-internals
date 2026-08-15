@@ -50,18 +50,22 @@ torchrun --standalone --nproc_per_node=2 \
 
 ## 状态
 
-- [x] 仓库骨架 + 章节地图
-- [x] 00-primitives：init/all_reduce Python 侧 + ProcessGroupNCCL C++ 侧走读笔记、
-      demo_allreduce + demo_async_stream（待 L20 验证）
-- [ ] 00-primitives 其余（rendezvous/store、NCCL 初始化、coalescing）
-- [ ] 01-device-mesh
-- [ ] 02-ddp
-- [ ] 03-zeroredundant
-- [ ] 04-fsdp
-- [ ] 05-hsdp
-- [ ] 06-tp
-- [ ] 07-pipelining
-- [ ] 08-rpc
+全部章节源码走读 + 演示完成，均已在 4×L20（torch 2.10.0a0 nightly）验证：
+
+| 章节 | 核心验证（L20） |
+| --- | --- |
+| 00-primitives | all_reduce 语义/子组/异步+stream 重叠、coalescing（2/4×NCCL + Gloo） |
+| 01-device-mesh | 2D mesh 组结构/切片/通信域隔离（4×NCCL + Gloo） |
+| 02-ddp | 手写 DDP 与官方 DDP 3 步参数逐元素一致（2/4×NCCL + Gloo） |
+| 03-zeroredundant | 官方 ZeRO-1 与全量 AdamW 逐元素一致（2/4×NCCL + Gloo） |
+| 04-fsdp | 手写 FSDP 与官方 FSDP FULL_SHARD 逐元素一致（2/4×NCCL） |
+| 05-hsdp | 手写 HSDP 与官方 HYBRID_SHARD 逐元素一致（4×NCCL） |
+| 06-tp | 官方 TP 输出与单设备一致（2×NCCL + Gloo） |
+| 07-pipelining | 官方 1F1B loss 与单设备一致（2×NCCL + Gloo） |
+| 08-rpc | 参数服务器模式（rpc_sync/rpc_async/RRef） |
+
+每个 wrapper 的"手写 mini 版"（DDP/FSDP/HSDP）与官方实现数值等价，是
+本仓库的验证主线；版本差异与踩坑记录在对应章节 notes 末尾。
 
 ## License
 
