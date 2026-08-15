@@ -248,5 +248,6 @@ mesh = init_device_mesh("cuda", (2, 2), mesh_dim_names=("dp", "tp"))
    （150 行手写 DDP 与官方数值等价）
 2. 想搞懂细节：对应章节的 `README.md`（白话 + 源码地图）→ `notes/`（走读）
 3. 想踩坑时对照：每章 README 的"常见坑"段落
+4. 想知道 Megatron/DeepSpeed 原版和 PyTorch 的实现差异：`chapters/13-frameworks/`
 
 全仓库 13 个主题的完整目录见 [README.md](README.md)。

@@ -35,7 +35,7 @@ chapters/<编号>-<主题>/
 | [03](chapters/03-zeroredundant/) | ZeRO-1 | [10](chapters/10-memory/) | 显存实测 |
 | [04](chapters/04-fsdp/) | FSDP | [11](chapters/11-nccl-internals/) | NCCL 算法实测 |
 | [05](chapters/05-hsdp/) | HSDP | [12](chapters/12-activation-checkpoint/) | 激活检查点 |
-| [06](chapters/06-tp/) | 张量并行 | | |
+| [06](chapters/06-tp/) | 张量并行 | [13](chapters/13-frameworks/) | 三框架源码对比 |
 
 ## 快速开始
 
