@@ -19,3 +19,36 @@
 - Megatron-LM：`/mnt/storage01/zhangwenchao02/tools/Megatron-LM`（megatron-core 0.18.0）
 - DeepSpeed：0.19.3（容器隔离 venv）
 - PyTorch：`2.10.0a0+a36e1d39eb.nv26.01.42222806`
+
+## 实测记录（2026-08-16，4×L20，torch 2.10 / DeepSpeed 0.19.3 / megatron-core 0.18.0）
+
+### FSDP vs ZeRO-3（同一 202M 模型、同数据、同 AdamW，2 卡，3 步）
+
+| | 峰值显存 | 吞吐 | loss 序列 |
+| --- | --- | --- | --- |
+| PyTorch FSDP | **3.94 GB** | **6088 tok/s** | mean loss 下与 ZeRO-3 一致 |
+| DeepSpeed ZeRO-3 | 4.87 GB | 4937 tok/s | 同上 |
+
+- **数值等价**：mean loss 下 3 步后参数向量 `max_abs_diff = 0.0`（逐元素
+  完全一致）——"同数学"的实测证明。
+- **ZeRO-3 显存高 19%**：双副本结构的常驻代价（fp16 分片 + fp32 分区主
+  副本）实测出来了，与 notes/03 源码分析吻合。
+- 注意：sum loss（量级 364→-8773）下两者出现 3.9e-4 的参数差——FP32
+  归约顺序的 1e-7 级差异被超大梯度放大，不是实现错误。
+
+### Megatron TP vs PyTorch TP（同一 2 层 MLP、同权重、同数据，TP=2，3 步）
+
+| | loss 序列 | 吞吐 |
+| --- | --- | --- |
+| PyTorch DTensor TP | -0.0008, -0.0968, -0.1929 | 27553 tok/s |
+| Megatron TP | -0.0009, -0.0967, -0.1926 | 92163 tok/s |
+
+- loss 趋势一致（第 1/2 步相对差 ~1e-3，属 FP32 归约顺序差异）。
+- 吞吐差异**不具普适性**：模型仅 4M 参数，PyTorch 侧 DTensor dispatch
+  开销主导；大规模模型需另测（本章不覆盖）。
+
+### 运行方式
+
+- `demos/bench_fsdp.py`：系统 python + torchrun（2 卡）
+- `demos/bench_zero3.py`：DeepSpeed venv 的 python（`-m torch.distributed.run`）
+- `demos/bench_megatron_tp.py`：系统 python + torchrun（2 卡）
