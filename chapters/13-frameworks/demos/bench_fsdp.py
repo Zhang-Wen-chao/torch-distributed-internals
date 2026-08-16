@@ -52,7 +52,8 @@ def main() -> None:
         full = torch.cat([p.detach().flatten() for p in model.parameters()]).cpu()
     if rank == 0:
         print(f"[fsdp] peak={peak/1e9:.2f}GB tok/s={tps:.0f} loss={[round(l,2) for l in losses]}")
-        torch.save(full, "/tmp/fsdp_params.pt")
+        dump = os.environ.get("BENCH_DUMP", "/tmp/fsdp_params.pt")
+        torch.save(full, dump)
     dist.barrier()
     dist.destroy_process_group()
 

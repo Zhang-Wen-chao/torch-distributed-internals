@@ -1,8 +1,8 @@
 """Benchmark: DeepSpeed ZeRO-3（与 FSDP 同模型同数据对比）。
 
 训练 3 步，记录峰值显存/吞吐/loss，dump rank0 全量参数到 /tmp/zero3_params.pt。
-必须在 DeepSpeed venv 的 python 下跑（不能用系统 torchrun）：
-    /tmp/mini-deepspeed-ds-venv/bin/python -m torch.distributed.run ...
+必须在装有 DeepSpeed 的 python 环境下跑（用该环境的
+`python -m torch.distributed.run` 启动，不能用其他环境的 torchrun）。
 """
 import os
 import sys
@@ -65,7 +65,8 @@ def main() -> None:
         full = torch.cat([p.detach().flatten().cpu() for p in params])
     if rank == 0:
         print(f"[zero3] peak={peak/1e9:.2f}GB tok/s={tps:.0f} loss={[round(l,2) for l in losses]}")
-        torch.save(full, "/tmp/zero3_params.pt")
+        dump = os.environ.get("BENCH_DUMP", "/tmp/zero3_params.pt")
+        torch.save(full, dump)
     dist.barrier()
     dist.destroy_process_group()
 

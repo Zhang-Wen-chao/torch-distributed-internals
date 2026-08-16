@@ -16,7 +16,7 @@
 
 ## 走读版本
 
-- Megatron-LM：`/mnt/storage01/zhangwenchao02/tools/Megatron-LM`（megatron-core 0.18.0）
+- Megatron-LM：megatron-core 0.18.0+be2b2cd
 - DeepSpeed：0.19.3（容器隔离 venv）
 - PyTorch：`2.10.0a0+a36e1d39eb.nv26.01.42222806`
 
